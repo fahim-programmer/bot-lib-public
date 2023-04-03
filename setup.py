@@ -1,9 +1,11 @@
 from setuptools import setup
 
+# python setup.py bdist_wheel
+
 setup(
     name='bot_lib_public',
-    version='1.0.0',
-    packages=['bot_lib'],
+    version='1.0.1',
+    packages=['package'],
     url='https://github.com/fahim-programmer/bot-lib-public/',
     license='Apache-2.0 license',
     author='Fahim Chohan',
