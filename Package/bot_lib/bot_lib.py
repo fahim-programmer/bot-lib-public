@@ -75,7 +75,7 @@ class Bot:
                  sock5_ip=None,
                  socks5_port=None,
                  target_name=__file__,
-                 driver_path="Drivers/driverchrome.exe",
+                 driver_exe="Drivers/driverchrome.exe",
                  browser="Chrome",
                  default_profile=False,
                  debug=False):
