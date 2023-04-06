@@ -1,8 +1,10 @@
-# Bot_lib Public v1.0.0 Release 1-April 2023
+# Bot_lib Public v1.0.1 Release 1-April 2023
 
 This is python module aims to provide user-friendly interface to the web-automation and desktop automation tools available like Selenium. It offers driver management, proxies, proxy testing, shorter source code and faster development with cross browser script compatibility. The aim is to streamline the automation procedure, minimize the bot detection and minimize the time of development needed. The scripts generated with bot_lib could be very complex yet still very readable and less error-prone, and they are easier to maintain too.
 
 ## Installation 
+
+Watch video tutorial here https://www.youtube.com/watch?v=rFLyj9u0MbE
 
 You have to make a virtual environment or not and put this command on your terminal and the latest public release will install.
 
