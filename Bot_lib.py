@@ -1059,8 +1059,7 @@ class Chrome_Driver:
                 os.remove("Drivers\driverdown.zip")
             except Exception:
                 pass
-            return None
-        
+            return None   
 
 class MQueues:
     """ MQueues or managed queues is a class in bot_lib_v3.py which offers easy interface

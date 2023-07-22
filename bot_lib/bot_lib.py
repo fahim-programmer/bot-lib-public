@@ -1,3 +1,6 @@
+# bot-lib-public version 2.0.0
+# now have Excellib, MQueues, ImageSensor and Threading capabilities 
+
 import platform
 import sys
 import os
@@ -6,6 +9,9 @@ import pickle
 import csv
 import time
 import random
+from queue import Queue
+from threading import Thread
+import concurrent.futures
 
 def install_dependencies():
     requirements = ['selenium', 'requests']
@@ -58,6 +64,86 @@ def direct_download(URL, file_path_with_extension, show_output=False, user_agent
             print("\n" + "Failed downloading driver")
         return None
 
+def dict_reverse(dict_input):
+    reversed_char_set = {}
+    index = 0
+    keys_of_dict = list(dict_input.keys())
+    values_of_dict = list(dict_input.values())
+    while index < len(keys_of_dict):
+        reversed_char_set[values_of_dict[index]] = keys_of_dict[index]
+        index += 1
+    return reversed_char_set
+
+
+def random_screen():
+    """ Returns a random screen size from the global dict of screen sizes """
+    GLOBAL_SCREEN_SIZES = {3: "1920,1080", 2: "1366,768", 1: "1280x720"}
+    random_number = random.randint(1, 3)
+    return GLOBAL_SCREEN_SIZES[random_number]
+
+def threadPool(values, targetFunction, maxWorkers=None):
+    if maxWorkers == None:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
+            results = list(executor.map(targetFunction, values))
+    else:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = list(executor.map(targetFunction, values))
+    return results
+
+def spawn_thread(function, arguments=(), end_on_exit=False):
+    target_thread = Thread(target=function, args=arguments)
+    target_thread.start()
+    if end_on_exit is True:
+        target_thread.isDaemon()
+    return target_thread
+
+def kill_thread(thread):
+    thread.join()
+    return None
+
+def subroutine(function, arguments=None):
+    routine_function_return = MQueues.create_queue()
+
+    def deploy(*args, **kwargs):
+        if arguments:
+            return_ = function(arguments)
+        else:
+            return_ = function()
+        MQueues.add_to_queue(routine_function_return, return_)
+
+    if arguments:
+        spawn_thread(deploy, arguments=(arguments,))
+    else:
+        spawn_thread(deploy)
+    return routine_function_return
+
+def test_chrome_driver(driver_file_path):
+    class driver_test(Bot):
+        def __init__(self, driver_path):
+            super().__init__(driver_exe=driver_path,
+                             force_spawn_browser=False)
+            self.get_url("""https://www.google.com""")
+
+    try:
+        driver_test(driver_file_path)
+        return "WORKING"
+    except Exception:
+        return "FAILED"
+
+def check_driver_presence(driver_path):
+    """ Checks Chrome Driver Presence and tests it """
+    print("Driver check running")
+    result = os.path.isfile(driver_path)
+    if result is True:
+        check = test_chrome_driver(driver_path)
+        if check == "WORKING":
+            return "OK"
+        if check == "FAILED":
+            print("Internet Connection Check Failed")
+            return "NOT OK"
+    elif result is False:
+        return "NOT FOUND"
+
 
 class Bot:
     """ It is wrapper for selenium based bot to offer ease of use and quick development
@@ -78,10 +164,11 @@ class Bot:
                  driver_exe="Drivers/driverchrome.exe",
                  browser="Chrome",
                  default_profile=False,
-                 debug=False):
+                 debug=False,
+                 noGPU=False,
+                 caps=False):
 
         from selenium import webdriver
-        from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
         from selenium.common import exceptions
         from selenium.webdriver import ActionChains
         from selenium.webdriver.common.by import By
@@ -110,7 +197,8 @@ class Bot:
                 options.add_experimental_option('useAutomationExtension', False)
                 options.add_argument('--disable-blink-features=AutomationControlled')
                 options.add_argument("--log-level=3")
-                # options.add_argument("--disable-gpu")
+                if noGPU:
+                    options.add_argument("--disable-gpu")
                 if debug:
                     options.add_argument("--remote-debugging-port=9222")
                 if force_spawn_browser is False:
@@ -126,11 +214,15 @@ class Bot:
                 else:
                     options.add_argument(f"user-data-dir={user_data_path}")
                 options.add_argument(self.USER_AGENT)
-                # Launch with or without metrics enabled
-                caps = DesiredCapabilities.CHROME.copy()
-                caps['goog:loggingPrefs'] = {'performance': 'ALL'}
-                self.driver = webdriver.Chrome(service=ChromeService(executable_path=str(driver_exe)), options=options,
-                                               desired_capabilities=caps)
+                if caps:
+                    from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+                    # Launch with or without metrics enabled
+                    caps = DesiredCapabilities.CHROME.copy()
+                    caps['goog:loggingPrefs'] = {'performance': 'ALL'}
+                    self.driver = webdriver.Chrome(service=ChromeService(executable_path=str(driver_exe)), options=options,
+                                                desired_capabilities=caps)
+                else:
+                    self.driver = webdriver.Chrome(service=ChromeService(executable_path=str(driver_exe)), options=options)
             # --------------------------------------> Microsoft Edge
             elif browser.lower() == "edge":
                 from selenium.webdriver.edge.service import Service as EdgeService
@@ -968,6 +1060,307 @@ class Chrome_Driver:
             except Exception:
                 pass
             return None
+        
+
+class MQueues:
+    """ MQueues or managed queues is a class in bot_lib_v3.py which offers easy interface
+        to create and use queues with less strict ways in your bot projects """
+
+    @staticmethod
+    def listen_until(any_queue_object, show_output=False):
+        """ Try and listen to a queue until a value shows up then do something """
+        while True:
+            try:
+                get_value = any_queue_object.get_nowait()
+                if get_value is not None:
+                    return get_value
+            except Exception:
+                pass
+
+    @staticmethod
+    def listen_print(checking_value):
+        """ Very useful function to avoid unwanted printing of null values """
+        if checking_value is not None:
+            print(checking_value)
+        else:
+            pass
+
+    @staticmethod
+    def listen_check(any_queue_object, show_output=False):
+        """ Try and listen to a queue for a value if nothing is there pass """
+        try:
+            get_value = any_queue_object.get_nowait()
+            if get_value is not None:
+                return get_value
+            else:
+                return ""
+        except Exception:
+            pass
+
+    @staticmethod
+    def create_queue(capacity_of_queue=0, queue_id="", show_output=False):
+        """ It creates a queue with a max capacity of elements """
+        if capacity_of_queue <= 0:
+            capacity_of_queue = 0
+            if show_output is True:
+                print(f"Total capacity of this queue {queue_id} is :: unlimited")
+        else:
+            if show_output is True:
+                print(f"Total capacity of this queue {queue_id} is :: {capacity_of_queue}")
+        return Queue(maxsize=capacity_of_queue)
+
+    @staticmethod
+    def add_to_queue(spawned_queue, target_element=None, show_output=False):
+        """ It adds something to the Queue provided in the function """
+        if spawned_queue.full() is True:
+            if show_output is True:
+                print(f"Queue Already Full :: MaxSize {spawned_queue.qsize()}")
+            return None
+        else:
+            if target_element is None:
+                return None
+            if target_element is not None:
+                try:
+                    if show_output is True:
+                        print(str(target_element) + " ::" + " Adding to the Queue")
+                    spawned_queue.put(target_element)
+                    return f"Successfully Added {target_element}"
+                except Exception:
+                    if show_output is True:
+                        print(str(target_element) + " ::" + " Failed adding to the Queue")
+                    return None
+
+    @staticmethod
+    def get_first_from_queue(spawned_queue, force_no_wait=False, show_output=False):
+        """ Get something specific from the Queue or sequentially using FIFO method """
+        try:
+            if force_no_wait is True:
+                value_from_queue = spawned_queue.get_nowait()
+            else:
+                value_from_queue = spawned_queue.get()
+            if show_output is True:
+                print(f"{value_from_queue} is present in the queue")
+            return value_from_queue
+        except Exception:
+            if show_output is True:
+                print(f"Nothing in the queue")
+            return None
+
+    @staticmethod
+    def get_element_from_queue(spawned_queue, get_element, show_output=False):
+        """ Get something specific from the Queue directly regardless of order """
+        try:
+            if spawned_queue.empty() is True:
+                raise Exception
+            else:
+                if show_output is True:
+                    sub_function_output = True
+                else:
+                    sub_function_output = False
+                value_from_queue = MQueues.any_element_from_queue(spawned_queue, get_element, sub_function_output)
+                if value_from_queue is None:
+                    raise Exception
+                else:
+                    if show_output is True:
+                        print(f"{value_from_queue} is present in the queue")
+                    return value_from_queue
+        except Exception:
+            if show_output is True:
+                print(f"{get_element} is not present in the queue")
+            return None
+
+    @staticmethod
+    def queue_check_empty(returned_queue_object, show_output=False):
+        """ It checks it the queue is empty or not """
+        if show_output is True:
+            print("Is Queue Empty: ", returned_queue_object.empty())
+        return returned_queue_object.empty()
+
+    @staticmethod
+    def any_element_from_queue(spawned_queue, element, show_output=False):
+        """ It extracts an element from a queue and refills the queue with data """
+        list_of_elements = []
+        while spawned_queue.empty() is not True:
+            list_of_elements.append(spawned_queue.get())
+        print(list_of_elements)
+        return_value = None
+        for element_from_list in list_of_elements:
+            if element == element_from_list:
+                index_of_value = list_of_elements.index(element)
+                list_of_elements.pop(index_of_value)
+                return_value = element
+                if show_output is True:
+                    print(f"Extracted element :: {return_value}")
+            else:
+                pass
+        for items in list_of_elements:
+            MQueues.add_to_queue(spawned_queue, items)
+        return return_value
+
+    @staticmethod
+    def remove_element_from_queue(spawned_queue, element, show_output=False):
+        """ It removes an element from a queue and refills the queue with the previous data """
+        list_of_elements = []
+        while spawned_queue.empty() is not True:
+            list_of_elements.append(spawned_queue.get_nowait())
+
+        for element_from_list in list_of_elements:
+            if element == element_from_list:
+                index_of_value = list_of_elements.index(element)
+                list_of_elements.pop(index_of_value)
+                return_value = element
+                if show_output is True:
+                    print(f"Removed element :: {return_value}")
+            else:
+                pass
+        for items in list_of_elements:
+            MQueues.add_to_queue(spawned_queue, items)
+        return None
+
+    @staticmethod
+    def queue_check_full(returned_queue_object, show_output=False):
+        """ It checks it the queue is Full or not """
+        if show_output is True:
+            print("Is Queue Full: ", returned_queue_object.full())
+        return returned_queue_object.full()
+
+
+class Excel:
+    """ Usage-:
+    file = Excel.open("Video Data.xlsx")
+    ws = file.active
+    ws.cell(row=3, column=7, value="Done")
+    file.save("Video Data.xlsx")"""
+
+    @staticmethod
+    def open(xlsx_name,
+             open_read_only=False,
+             sheet_vba=False,
+             file_data_only=False,
+             enable_links=False):
+        import openpyxl
+        excel_file_object = openpyxl.open(filename=xlsx_name,
+                                          read_only=open_read_only,
+                                          keep_vba=sheet_vba,
+                                          data_only=file_data_only,
+                                          keep_links=enable_links)
+        return excel_file_object
+
+    class File:
+        @staticmethod
+        def new():
+            import openpyxl
+            " Creates an empty file in the ram"
+            try:
+                new_file_empty = openpyxl.Workbook()
+                return new_file_empty
+            except:
+                from openpyxl import Workbook
+                new_file_empty = Workbook()
+                return new_file_empty
+
+        @staticmethod
+        def load(xlsx_name, open_read_only=False, sheet_vba=False, file_data_only=False, enable_links=False):
+            import openpyxl
+            excel_file_object = openpyxl.open(filename=xlsx_name,
+                                              read_only=open_read_only,
+                                              keep_vba=sheet_vba,
+                                              data_only=file_data_only,
+                                              keep_links=enable_links)
+            return excel_file_object
+
+    @classmethod
+    def file_instance(self, name=None):
+        import openpyxl
+        """ Creates an empty file on the disk and returns the object, if file is already existing
+            it will open it instead of giving an error"""
+        if isinstance(name, str):
+            new_file_object = openpyxl.Workbook()
+            if name.split('.')[1] == 'xlsx':
+                if os.path.exists(name):  # New addition
+                    return self.open(xlsx_name=name)
+                else:
+                    new_file_object.save(name)
+                    return new_file_object
+            else:
+                raise "Wrong file extension provided must be xlsx"
+        elif name is None:
+            return openpyxl.Workbook()
+
+    # Legacy Support
+    @classmethod
+    def create(self, name=None, no_alert=False):
+        import openpyxl
+        """ Creates an empty file on the disk and returns the object, if file is already existing
+            it will open it instead of giving an error"""
+        if no_alert is True:
+            print(
+                "'create' function for Excel module has been deprecated and it is recommended to use 'file_instance' method")
+        if isinstance(name, str):
+            new_file_object = openpyxl.Workbook()
+            if name.split('.')[1] == 'xlsx':
+                if os.path.exists(name):  # New addition
+                    return self.open(xlsx_name=name)
+                else:
+                    new_file_object.save(name)
+                    return new_file_object
+            else:
+                raise "Wrong file extension provided must be xlsx"
+        elif name is None:
+            return openpyxl.Workbook()
+        
+class ImageSensor:
+    def __init__(self, mode='RGBA') -> None:
+        from PIL import Image
+        from PIL import ImageChops
+        import numpy as np
+        import math
+        self.Image = Image
+        self.ImageChops = ImageChops
+        self.np = np
+        self.math = math
+
+        ''' 
+        
+        Difference-based Image Sensor which allows users to detect how far one image is from another in terms of similarity from 0.0 perfect copy to onwards crude copy
+        Requirements Pillow, Numpy
+        
+        Sample Usage -:
+        sensorObj = ImageSensor()
+        image1 = sensorObj.Imageload('IMAGE1')
+        image2 = sensorObj.Imageload('IMAGE2')
+        match = sensorObj.NPdiff(image1, image2, minFactor=1.0, maxFactor=3.0)
+        
+        '''
+        self.commonImageMode = mode
+
+    def Imageload(self, image, resize=False, resolution=(0, 0)):
+        if resize is True:
+            return self.Image.open(image).resize(resolution)
+        elif resize is False:
+            return self.Image.open(image)
+
+    def RMSdiff(self, im1, im2, significance=0.0):
+        "Calculate the root-mean-square difference between two images"
+        diff = self.ImageChops.difference(im1.convert(self.commonImageMode), im2.convert(self.commonImageMode))
+        h = diff.histogram()
+        sq = (value * (idx ** 2) for idx, value in enumerate(h))
+        sum_of_squares = sum(sq)
+        rms = self.math.sqrt(sum_of_squares / float(im1.size[0] * im1.size[1]))
+        return rms
+
+    def NPdiff(self, im1, im2, minFactor=1.0, maxFactor=3.0):
+        "Calculate the numpy array difference between two images"
+        diff = self.ImageChops.difference(im1.convert(self.commonImageMode), im2.convert(self.commonImageMode))
+        value = self.np.mean(self.np.array(diff))
+        if value == 0.0:
+            return "Images Match Perfect", value
+        elif value <= minFactor:
+            return "Images Match Below factor", value
+        elif value <= maxFactor:
+            return "Images Match Above factor", value
+        elif value > maxFactor:
+            return "Images Don't Match", value
 
 if __name__ == '__main__':
     pass
