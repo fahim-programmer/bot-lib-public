@@ -6,7 +6,7 @@ LONG_DESCRIPTION = 'bot-lib-public is a Python library aimed at simplifying the 
 
 setup(
     name='bot_lib_public',
-    version='2.0.0',
+    version='2.0.1',
     packages=['bot_lib'],
     url='https://github.com/fahim-programmer/bot-lib-public/',
     license='Apache-2.0 license',
@@ -20,7 +20,8 @@ setup(
         'requests==2.27.0',
         'Pillow==10.0.0',
         'PySocks==1.7.1',
-        'numpy==1.25.1'
+        'numpy==1.25.1',
+        'webdriver-manager==4.0.1'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License',

@@ -12,6 +12,7 @@ import random
 from queue import Queue
 from threading import Thread
 import concurrent.futures
+import webdriver_manager as webdriver_manager
 
 def install_dependencies():
     requirements = ['selenium', 'requests']
