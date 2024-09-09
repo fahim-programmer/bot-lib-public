@@ -11,6 +11,11 @@ import time
 import random
 from queue import Queue
 from threading import Thread
+import json
+import subprocess
+import requests
+import pprint
+import shutil
 import concurrent.futures
 import webdriver_manager as webdriver_manager
 
@@ -971,7 +976,90 @@ class Edge_Driver:
             return None
 
 
-class Chrome_Driver:
+class Chrome_Driver():
+
+    DEFAULT_ENDPOINT = "https://googlechromelabs.github.io/chrome-for-testing/latest-versions-per-milestone-with-downloads.json"
+
+    def __init__(self, version:str="000.0.0000.000", platform_="win64") -> None:
+        self.version = version
+        self.platform = platform_
+
+    def install(self):
+        if self.version == "000.0.0000.000":
+            MAJOR, MINOR, BUILD, RELEASE = self.get_chrome_version_().split('.')
+            specification = self.fetchSpecifications()
+            milestones = specification['milestones'].keys()
+            if MAJOR in milestones:
+                # with open("df.json", "w") as jsonfile: jsonfile.write(json.dumps(specification['milestones'][MAJOR], indent=4))
+                for each in specification['milestones'][MAJOR]["downloads"]["chromedriver"]:
+                    if each['platform'] == self.platform:
+                        print(" Correct Driver ", each["url"])
+                        try:
+                            value = os.path.exists("Drivers/driverchrome.exe")
+                            if value is True:
+                                return "Drivers/driverchrome.exe"
+                            else:
+                                return self.downloads(each["url"])
+                        except Exception:
+                            pass
+                print("Valid")
+            else:
+                print("Invalid Version Number Installed")
+        else:
+            MAJOR, MINOR, BUILD, RELEASE = self.version.split('.')
+            specification = self.fetchSpecifications()
+            milestones = specification['milestones'].keys()
+            if MAJOR in milestones:
+                # with open("df.json", "w") as jsonfile: jsonfile.write(json.dumps(specification['milestones'][MAJOR], indent=4))
+                for each in specification['milestones'][MAJOR]["downloads"]["chromedriver"]:
+                    if each['platform'] == self.platform:
+                        print(" Correct Driver ", each["url"])
+                        try:
+                            value = os.path.exists("Drivers/driverchrome.exe")
+                            if value is True:
+                                return "Drivers/driverchrome.exe"
+                            else:
+                                return self.downloads(each["url"])
+                        except Exception:
+                            pass
+                print("Valid")
+            else:
+                print("Invalid Version Number Provided")
+
+    def get_chrome_version_(self):
+        Browser_object = Browsers()
+        info = Browser_object.is_chrome_installed
+        if info['Registered'] == True:
+            return info['Version']
+        else:
+            raise Exception("Chrome Browser Installation not found in registery")
+    
+    def downloads(self, url):
+        output = direct_download(URL=url, file_path_with_extension="Drivers\driverdown.zip", show_output=True)
+        if output is not None:
+            with zipfile.ZipFile("Drivers\driverdown.zip", "r") as zip_ref:
+                zip_ref.extract("chromedriver-win64/chromedriver.exe", "Temp")
+                shutil.copy("Temp/chromedriver-win64/chromedriver.exe", "Drivers/chromedriver.exe")
+                shutil.rmtree("Temp")
+            os.remove("Drivers\driverdown.zip")
+            try:
+                os.rename("Drivers\chromedriver.exe", 'Drivers\driverchrome.exe')
+            except FileExistsError:
+                pass
+            return 'Drivers\driverchrome.exe'
+        else:
+            try:
+                os.remove("Drivers\driverdown.zip")
+            except Exception:
+                pass
+            return None   
+        
+    def fetchSpecifications(self):
+        res = requests.get(self.DEFAULT_ENDPOINT)
+        version_information = res.json()
+        return version_information
+
+class Chrome_Driver_Legacy:
     # Need control flow for when the target browser is not installed or accessible
     def __init__(self):
         platform_ = platform.system()

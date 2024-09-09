@@ -16,12 +16,12 @@ setup(
     platforms=['Windows', 'MacOS', 'Linux'],
     description='Wrapper for Selenium and contains supporting classes for browser automation',
     install_requires=[
-        'selenium==4.8.0',
-        'requests==2.27.0',
-        'Pillow==10.0.0',
-        'PySocks==1.7.1',
-        'numpy==1.25.1',
-        'webdriver-manager==4.0.1'
+        'selenium>=4.8.0',
+        'requests>=2.27.0',
+        'Pillow>=10.0.0',
+        'PySocks>=1.7.1',
+        'numpy>=1.25.1',
+        'webdriver-manager>=4.0.1'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
