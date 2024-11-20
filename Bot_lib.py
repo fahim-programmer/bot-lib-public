@@ -17,7 +17,6 @@ import requests
 import pprint
 import shutil
 import concurrent.futures
-import webdriver_manager as webdriver_manager
 
 def install_dependencies():
     requirements = ['selenium', 'requests']
@@ -976,7 +975,7 @@ class Edge_Driver:
             return None
 
 
-class Chrome_Driver():
+class Chrome_Driver:
 
     DEFAULT_ENDPOINT = "https://googlechromelabs.github.io/chrome-for-testing/latest-versions-per-milestone-with-downloads.json"
 
